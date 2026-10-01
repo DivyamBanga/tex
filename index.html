@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>Cortex — Every AI chat you've ever had, mapped</title>
+<meta name="description" content="Cortex turns your ChatGPT and Claude history into a navigable 3D memory space. Search by meaning, explore clusters, and pipe old context back into Claude over MCP." />
+<meta property="og:title" content="Cortex — your AI has amnesia. This is its memory." />
+<meta property="og:description" content="Every AI chat you've ever had, mapped as a living 3D graph. Built by Divyam & Vibhor at CxC." />
+<meta property="og:image" content="https://divyambanga.github.io/tex/assets/poster.jpg" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="theme-color" content="#070A12" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='5' fill='%2300D4FF'/%3E%3Ccircle cx='16' cy='16' r='11' fill='none' stroke='%2300D4FF' stroke-opacity='.4' stroke-width='1.5'/%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,300..800&family=Martian+Mono:wght@300..600&family=Newsreader:ital,opsz,wght@1,6..72,300..500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body class="is-intro">
+
+<canvas id="gl" aria-hidden="true"></canvas>
+<div id="shade" aria-hidden="true"></div>
+<div id="grain" aria-hidden="true"></div>
+
+<!-- ============ HERO / FILM ============ -->
+<section id="hero" aria-label="Cortex intro">
+
+  <!-- Act I: the chat -->
+  <div id="stage" aria-hidden="true">
+    <div id="chat">
+      <div class="chat-top">
+        <span class="chat-model">ChatGPT <svg viewBox="0 0 12 12" width="10" height="10"><path d="M2.5 4.5 6 8l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></span>
+        <span class="chat-share">Share</span>
+      </div>
+      <div class="chat-body" id="chatBody">
+        <div class="chat-empty" id="chatEmpty">What can I help with?</div>
+      </div>
+      <div class="chat-input" id="chatInputBar">
+        <span class="chat-plus">+</span>
+        <span class="chat-field"><span id="chatTyped"></span><span class="caret" id="chatCaret"></span><span class="ph" id="chatPh">Ask anything</span></span>
+        <span class="chat-send" id="chatSend"><svg viewBox="0 0 16 16" width="15" height="15"><path d="M8 13V3M3.5 7.5 8 3l4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      </div>
+    </div>
+    <svg id="fakeCursor" viewBox="0 0 24 24" width="26" height="26"><path d="M5 3.2v15.6l4.1-3.9 2.6 6 2.7-1.2-2.6-5.9h5.7z" fill="#fff" stroke="#000" stroke-width="1.3" stroke-linejoin="round"/></svg>
+    <div id="clickRing"></div>
+  </div>
+
+  <div id="scanline" aria-hidden="true"></div>
+  <div id="hud" aria-hidden="true">
+    <div class="hud-line" id="hudA"></div>
+    <div class="hud-line hud-vec" id="hudB"></div>
+  </div>
+  <div id="landing" aria-hidden="true">
+    <div class="landing-title">Resume Tailoring for RBC</div>
+    <div class="landing-coord" id="landingCoord"></div>
+  </div>
+  <div id="ghosts" aria-hidden="true"></div>
+  <div id="labels" aria-hidden="true"></div>
+  <div id="counter" aria-hidden="true"><span class="k">indexed</span> <b id="counterN">00</b><span class="k">/76 conversations</span></div>
+  <div id="caption" aria-hidden="true"></div>
+
+  <!-- Final hero UI -->
+  <header id="nav">
+    <a class="logo" href="#hero" aria-label="Cortex home"><span class="logo-dot"></span>Cortex</a>
+    <nav>
+      <a href="#how">How it works</a>
+      <a href="#capabilities">Capabilities</a>
+      <a href="#team">Team</a>
+      <a class="gh" href="https://github.com/Vibhor7-7/Cortex-CxC" target="_blank" rel="noopener">GitHub <span>↗</span></a>
+    </nav>
+  </header>
+
+  <div id="heroCopy">
+    <p class="eyebrow"><span class="pulse"></span>CxC AI Hackathon · Winner</p>
+    <h1 class="wordmark" aria-label="Cortex"><span>C</span><span>o</span><span>r</span><span>t</span><span>e</span><span>x</span></h1>
+    <p class="tagline">Every AI chat you've ever had, <em>mapped as a living memory.</em></p>
+  </div>
+
+  <div id="search">
+    <svg viewBox="0 0 16 16" width="14" height="14"><circle cx="7" cy="7" r="4.6" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="m10.5 10.5 3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    <input id="searchInput" type="text" placeholder="Search 76 memories…" autocomplete="off" spellcheck="false" />
+    <kbd>/</kbd>
+    <div id="searchResults"></div>
+  </div>
+
+  <div id="hint">
+    <span><b>Drag</b> orbit</span><span><b>Scroll</b> zoom to cursor</span><span><b>Click</b> open memory</span>
+  </div>
+
+  <div id="legend"></div>
+
+  <a id="scrollCue" href="#problem" aria-label="Scroll down"><span>Scroll</span><i></i></a>
+
+  <div id="tip" role="tooltip">
+    <div class="tip-cluster"><i></i><span></span></div>
+    <div class="tip-title"></div>
+    <div class="tip-meta"></div>
+    <div class="tip-summary"></div>
+    <div class="tip-tags"></div>
+  </div>
+
+  <aside id="panel" aria-label="Selected memory">
+    <button id="panelClose" aria-label="Close">✕</button>
+    <div class="panel-cluster"><i></i><span></span></div>
+    <h3 class="panel-title"></h3>
+    <div class="panel-coord"></div>
+    <p class="panel-summary"></p>
+    <div class="panel-tags"></div>
+    <div class="panel-sub">Nearest memories</div>
+    <ol class="panel-nb"></ol>
+  </aside>
+
+  <div id="introCtl">
+    <button id="skip">Skip intro <kbd>esc</kbd></button>
+  </div>
+  <button id="replay" aria-label="Replay intro"><svg viewBox="0 0 16 16" width="13" height="13"><path d="M3 8a5 5 0 1 0 1.5-3.6M3 2.5v2.8h2.8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Replay</button>
+</section>
+
+<main id="content">
+
+  <!-- ============ 01 PROBLEM ============ -->
+  <section id="problem" class="sec">
+    <div class="sec-tag"><span>01</span>The problem</div>
+    <h2 class="scrub" data-scrub>You've asked ChatGPT to tailor the same resume <em>three times.</em> It forgot. Every. Single. Time.</h2>
+
+    <div class="dupes" id="dupes">
+      <div class="dupe" data-i="0">
+        <div class="dupe-head"><i></i>Resume Tailoring for RBC<span>Then</span></div>
+        <div class="dupe-u">help me tailor my resume for the RBC data analyst role</div>
+        <div class="dupe-a">Sure! Paste your resume and the job description and I'll…</div>
+      </div>
+      <div class="dupe" data-i="1">
+        <div class="dupe-head"><i></i>Resume Tailoring for RBC<span>Again</span></div>
+        <div class="dupe-u">can you tailor my resume for the rbc analyst posting</div>
+        <div class="dupe-a">Happy to help! Could you share your current resume first?</div>
+      </div>
+      <div class="dupe" data-i="2">
+        <div class="dupe-head"><i></i>Resume Tailoring for RBC<span>And again</span></div>
+        <div class="dupe-u">rbc data analyst — tailor my resume pls</div>
+        <div class="dupe-a">Of course. To get started, paste your resume and…</div>
+      </div>
+      <div class="dupe-count" id="dupeCount">×3</div>
+    </div>
+
+    <p class="amnesia"><span class="a1">Your AI has amnesia.</span> <span class="a2">Cortex is its memory.</span></p>
+  </section>
+
+  <!-- ============ 02 HOW ============ -->
+  <section id="how" class="sec">
+    <div class="sec-tag"><span>02</span>How it works</div>
+    <div class="how-pin">
+      <div class="how-left">
+        <ol class="how-steps" id="howSteps">
+          <li class="on"><b>Upload</b><p>Drop in your ChatGPT or Claude HTML export. Cortex parses every message from every conversation.</p><code>parsers/chatgpt_parser.py</code></li>
+          <li><b>Embed</b><p>Each conversation is summarized and embedded into a 768-dimensional vector, locally, through Ollama.</p><code>nomic-embed-text · 768d</code></li>
+          <li><b>Reduce</b><p>UMAP folds 768 dimensions into 3 and keeps the neighbourhoods intact, so things that are close in meaning stay close in space.</p><code>UMAP · 768 → 3</code></li>
+          <li><b>Cluster</b><p>K-Means groups the cloud into topics and gives each one a semantic name. Your interests show up as constellations.</p><code>K-Means · k=5</code></li>
+          <li><b>Recall</b><p>Claude calls into your memory mid-conversation over MCP, so it already has the context and you don't paste anything.</p><code>search_memory · fetch_chat</code></li>
+        </ol>
+        <div class="how-progress"><i id="howBar"></i></div>
+      </div>
+      <div class="how-right">
+        <canvas id="howCanvas"></canvas>
+        <div class="how-readout" id="howReadout"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 03 CAPABILITIES ============ -->
+  <section id="capabilities" class="sec">
+    <div class="sec-tag"><span>03</span>Capabilities</div>
+    <h2 class="sec-h">Memory you can <em>see</em>, search, and hand back to the model.</h2>
+
+    <div class="bento">
+      <article class="card card-search" data-demo="search">
+        <div class="card-k">Hybrid search</div>
+        <h3>Find it by what you <em>meant</em>.</h3>
+        <p>Semantic and keyword retrieval run together, so a question still finds the chat that used none of its words.</p>
+        <div class="demo-search">
+          <div class="ds-box"><svg viewBox="0 0 16 16" width="13" height="13"><circle cx="7" cy="7" r="4.6" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="m10.5 10.5 3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span class="ds-q"></span><span class="caret"></span></div>
+          <ul class="ds-res">
+            <li style="--c:#FFA64D"><i></i>Active Recall and Spaced Repetition<b>0.82</b></li>
+            <li style="--c:#FFA64D"><i></i>Note-Taking for Memory<b>0.77</b></li>
+            <li style="--c:#FF6B9D"><i></i>2-Hour Focus System<b>0.61</b></li>
+            <li style="--c:#FFA64D"><i></i>Study Plan for Exam<b>0.58</b></li>
+          </ul>
+        </div>
+      </article>
+
+      <article class="card card-mcp" data-demo="mcp">
+        <div class="card-k">MCP integration</div>
+        <h3>Claude remembers <em>for you</em>.</h3>
+        <p>Cortex runs as an MCP server, and Claude Desktop pulls past context in by itself.</p>
+        <div class="demo-mcp">
+          <div class="dm-u">Help me tailor my resume for the RBC data analyst role.</div>
+          <div class="dm-tool">
+            <div class="dm-th"><span class="spin"></span><code>cortex · search_memory</code><span class="dm-q">"RBC resume"</span></div>
+            <div class="dm-row" style="--c:#00D4FF"><i></i>Resume Tailoring for RBC<b>0.83</b></div>
+            <div class="dm-row" style="--c:#00D4FF"><i></i>Cover letter request<b>0.65</b></div>
+            <div class="dm-row" style="--c:#00D4FF"><i></i>Building a Clean Skills Section<b>0.61</b></div>
+          </div>
+          <div class="dm-a"><span class="av"></span><span class="dm-text"></span></div>
+        </div>
+      </article>
+
+      <article class="card card-local">
+        <div class="card-k">Local-first</div>
+        <div class="big-num"><span data-count="0">0</span></div>
+        <h3>API keys required.</h3>
+        <p>Embeddings and summaries run on your machine through Ollama. Your chats stay on your computer.</p>
+      </article>
+
+      <article class="card card-dims">
+        <div class="card-k">Dimensionality</div>
+        <div class="big-num"><span data-count="768">768</span><small>→</small><span data-count="3">3</span></div>
+        <h3>Meaning, made spatial.</h3>
+        <p>UMAP keeps the global structure, so topics settle into real constellations.</p>
+      </article>
+
+      <article class="card card-pack">
+        <div class="card-k">Context packs</div>
+        <h3>Select chats and get a <em>system prompt</em>.</h3>
+        <p>Pick a few memories and Cortex compiles them into a portable context pack you can drop into any model.</p>
+        <div class="pack">
+          <span style="--c:#7CFF6B">Clean Python Functions</span>
+          <span style="--c:#7CFF6B">CSV Loading and Cleaning</span>
+          <span style="--c:#7CFF6B">Big-O Explained Simply</span>
+          <div class="pack-out"><code>You are helping a student who already knows list vs dict trade-offs, writes small pure functions, and…</code></div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <!-- ============ 04 DEMO ============ -->
+  <section id="demo" class="sec">
+    <div class="sec-tag"><span>04</span>The real thing</div>
+    <div class="demo-frame" id="demoFrame">
+      <video id="demoVideo" src="assets/demo.mp4" poster="assets/poster.jpg" muted loop playsinline preload="metadata"></video>
+      <button id="demoSound" aria-label="Toggle sound">Sound off</button>
+    </div>
+  </section>
+
+  <!-- ============ 05 STACK ============ -->
+  <section id="stack" class="sec">
+    <div class="sec-tag"><span>05</span>Under the hood</div>
+    <h2 class="sec-h">No build step. No cloud. <em>No API keys.</em></h2>
+    <div class="spec">
+      <div class="spec-row"><span>Frontend</span><b>Vanilla JS · Three.js · custom WebGL shaders</b><i>no framework</i></div>
+      <div class="spec-row"><span>Backend</span><b>FastAPI · SQLAlchemy · BeautifulSoup4</b><i>python 3.11+</i></div>
+      <div class="spec-row"><span>Storage</span><b>SQLite + NumPy cosine vector store</b><i>single file</i></div>
+      <div class="spec-row"><span>Embeddings</span><b>nomic-embed-text via Ollama</b><i>768d · local</i></div>
+      <div class="spec-row"><span>Summaries</span><b>Qwen 2.5 via Ollama</b><i>local</i></div>
+      <div class="spec-row"><span>Projection</span><b>UMAP</b><i>768 → 3</i></div>
+      <div class="spec-row"><span>Clustering</span><b>K-Means with semantic naming</b><i>auto-labelled</i></div>
+      <div class="spec-row"><span>Recall</span><b>Anthropic MCP SDK</b><i>search_memory · fetch_chat</i></div>
+      <div class="spec-row"><span>Retrieval QA</span><b>Backboard.io relevance guard</b><i>no junk context</i></div>
+      <div class="spec-row"><span>Tests</span><b>70 / 70 passing</b><i>green</i></div>
+    </div>
+  </section>
+
+  <!-- ============ 06 TEAM ============ -->
+  <section id="team" class="sec">
+    <div class="sec-tag"><span>06</span>Made by</div>
+    <div class="team">
+      <a class="member" href="https://github.com/DivyamBanga" target="_blank" rel="noopener" data-img="https://github.com/DivyamBanga.png?size=400">
+        <span class="m-name">Divyam<br/>Banga</span>
+        <span class="m-meta">@DivyamBanga <em>↗</em></span>
+      </a>
+      <span class="amp">&amp;</span>
+      <a class="member" href="https://github.com/Vibhor7-7" target="_blank" rel="noopener" data-img="https://github.com/Vibhor7-7.png?size=400">
+        <span class="m-name">Vibhor<br/>Sharma</span>
+        <span class="m-meta">@Vibhor7-7 <em>↗</em></span>
+      </a>
+    </div>
+    <p class="team-note">Built at the <b>CxC AI Hackathon</b>, where it took the win.</p>
+    <img id="memberFloat" alt="" />
+  </section>
+
+  <!-- ============ CTA ============ -->
+  <section id="cta" class="sec">
+    <h2 class="cta-h">Never start a chat <em>from scratch</em> again.</h2>
+    <div class="cta-row">
+      <a class="btn btn-solid" href="https://github.com/Vibhor7-7/Cortex-CxC" target="_blank" rel="noopener"><span>View on GitHub</span><i>↗</i></a>
+      <a class="btn" href="https://www.youtube.com/@divcodez" target="_blank" rel="noopener"><span>Watch on YouTube</span><i>↗</i></a>
+      <a class="btn btn-ghost" href="#hero" id="backToGraph"><span>Back to the graph</span><i>↑</i></a>
+    </div>
+    <footer>
+      <span>Cortex · Divyam &amp; Vibhor</span>
+      <span class="mono">76 memories · 5 clusters · 768 → 3</span>
+    </footer>
+  </section>
+</main>
+
+<div id="cursor" aria-hidden="true"><i class="c-dot"></i><i class="c-ring"></i></div>
+
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js"></script>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+} }
+</script>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
