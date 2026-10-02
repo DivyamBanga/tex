@@ -4,7 +4,8 @@ const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const lerp = (a, b, t) => a + (b - a) * t;
 const smooth = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
-const PAL = ['#00D4FF', '#FF6B9D', '#7CFF6B', '#FFA64D', '#B48CFF'];
+const PAL = ['#E6DFD3', '#C79A8B', '#9FB39A', '#C8AE82', '#9AA6BC'];
+const INK = '#ECE8E1';
 const fine = matchMedia('(pointer: fine)').matches;
 
 export function initUI(dataPromise) {
@@ -96,11 +97,11 @@ function how(data) {
   const chats = data.chats, N = chats.length;
   const cv = $('#howCanvas'), g = cv.getContext('2d'), steps = $$('#howSteps li'), bar = $('#howBar'), readout = $('#howReadout');
   const READ = [
-    ['chatgpt_export.html', '76 conversations · 419 messages'],
-    ['nomic-embed-text', 'float32[768] × 76'],
-    ['UMAP', '768 → 3 dimensions'],
-    ['K-Means', '5 clusters · auto-named'],
-    ['MCP · search_memory("RBC resume")', '3 hits · 0.83 / 0.65 / 0.61'],
+    ['Your export', '76 conversations'],
+    ['One vector per chat', '768 dimensions'],
+    ['Folded into space', '3 dimensions'],
+    ['Grouped by meaning', '5 topics'],
+    ['Claude asks Cortex', '3 memories found'],
   ];
   let w = 0, h = 0, dpr = 1;
   const size = () => { const r = cv.getBoundingClientRect(); dpr = Math.min(devicePixelRatio || 1, 2); w = r.width; h = r.height; cv.width = w * dpr; cv.height = h * dpr; };
@@ -121,21 +122,21 @@ function how(data) {
       const col = i < 38 ? 0 : 1, row = i % 38;
       const lw = m * 0.34 * s.bw, x0 = cx - m * 0.36 + col * m * 0.38;
       const user = row % 5 === 0;
-      return { x: (user ? x0 + m * 0.34 - lw : x0) + lw / 2, y: cy - m * 0.36 + row * (m * 0.72 / 37), w: lw, h: m * 0.009, r: 2, c: user ? '#8CBEFF' : '#dfe6f5', a: user ? 0.9 : 0.4 };
+      return { x: (user ? x0 + m * 0.34 - lw : x0) + lw / 2, y: cy - m * 0.36 + row * (m * 0.72 / 37), w: lw, h: m * 0.009, r: 2, c: INK, a: user ? 0.75 : 0.28 };
     }
     if (step === 1) { // the embedding: a heatmap of vector components
       const cols = 12, r = Math.floor(i / cols), c = i % cols, cell = m * 0.052;
       const v = 0.5 + 0.5 * Math.sin(t * 1.4 + s.ph + c * 0.4);
-      return { x: cx + (c - (cols - 1) / 2) * cell * 1.18, y: cy + (r - 3) * cell * 1.18, w: cell, h: cell, r: 4, c: v > 0.5 ? '#00D4FF' : '#B48CFF', a: 0.15 + 0.85 * Math.abs(v - 0.5) * 2 };
+      return { x: cx + (c - (cols - 1) / 2) * cell * 1.18, y: cy + (r - 3) * cell * 1.18, w: cell, h: cell, r: 3, c: INK, a: 0.06 + 0.6 * v };
     }
     // 3D: real UMAP coordinates, slowly rotating
     const p = chats[i].p, ang = t * 0.25 + step * 0.4, ca = Math.cos(ang), sa = Math.sin(ang);
     const x = p[0] * ca - p[2] * sa, z = p[0] * sa + p[2] * ca, y = p[1];
     const sc = m * 0.042, persp = 1 / (1 + z * 0.03);
-    const col = step === 2 ? '#dfe6f5' : PAL[chats[i].c];
-    let a = 0.9;
-    if (step === 4) a = [8, 7, 10, 28, 46].includes(i) ? 1 : 0.22;
-    return { x: cx + x * sc * persp, y: cy - y * sc * persp, w: 7 * persp, h: 7 * persp, r: 99, c: col, a, z };
+    const col = step === 2 ? INK : PAL[chats[i].c];
+    let a = step === 2 ? 0.7 : 0.85;
+    if (step === 4) a = [8, 7, 10, 28, 46].includes(i) ? 1 : 0.18;
+    return { x: cx + x * sc * persp, y: cy - y * sc * persp, w: 5.5 * persp, h: 5.5 * persp, r: 99, c: col, a, z };
   }
 
   function draw() {
@@ -153,7 +154,7 @@ function how(data) {
     // axes for 3D steps
     if (s >= 2 || k > 0 && s === 1) {
       const aa = s >= 2 ? 1 : k, m = Math.min(w, h);
-      g.strokeStyle = `rgba(140,190,255,${0.12 * aa})`; g.lineWidth = 1;
+      g.strokeStyle = `rgba(236,232,225,${0.07 * aa})`; g.lineWidth = 1;
       g.beginPath(); g.moveTo(w / 2 - m * 0.4, h / 2); g.lineTo(w / 2 + m * 0.4, h / 2); g.moveTo(w / 2, h / 2 - m * 0.4); g.lineTo(w / 2, h / 2 + m * 0.4); g.stroke();
     }
     const pts = [];
@@ -165,30 +166,29 @@ function how(data) {
     // recall step: query beam + links to the hits
     if (s === 4) {
       const hub = { x: w * 0.14, y: h * 0.16 };
-      g.font = `500 11px "Martian Mono", monospace`; g.fillStyle = '#D97757'; g.fillText('claude', hub.x - 18, hub.y - 16);
-      g.beginPath(); g.arc(hub.x, hub.y, 6, 0, 7); g.fill();
+      g.font = `400 12px "Bricolage Grotesque", sans-serif`; g.fillStyle = 'rgba(236,232,225,.6)'; g.fillText('Claude', hub.x - 18, hub.y - 14);
+      g.beginPath(); g.arc(hub.x, hub.y, 3.5, 0, 7); g.fillStyle = INK; g.fill();
       [8, 7, 10].forEach((i, n) => {
         const q = pts[i], e = smooth(0.05 + n * 0.12, 0.45 + n * 0.12, l);
-        g.strokeStyle = `rgba(0,212,255,${0.7 * e})`; g.lineWidth = 1.2;
+        g.strokeStyle = `rgba(236,232,225,${0.45 * e})`; g.lineWidth = 1;
         g.beginPath(); g.moveTo(hub.x, hub.y); g.lineTo(lerp(hub.x, q.x, e), lerp(hub.y, q.y, e)); g.stroke();
-        if (e > 0.98) { g.beginPath(); g.arc(q.x, q.y, 11 + Math.sin(t * 4 + n) * 2, 0, 7); g.strokeStyle = 'rgba(0,212,255,.6)'; g.stroke(); }
+        if (e > 0.98) { g.beginPath(); g.arc(q.x, q.y, 10, 0, 7); g.strokeStyle = 'rgba(236,232,225,.35)'; g.stroke(); }
       });
     }
     // edges in cluster step
     if (s === 3) {
       g.lineWidth = 1;
       chats.forEach((c, i) => c.nb.slice(0, 2).forEach(([j]) => {
-        const A = pts[i], B = pts[j]; g.strokeStyle = PAL[c.c]; g.globalAlpha = 0.18 * (1 - k);
+        const A = pts[i], B = pts[j]; g.strokeStyle = PAL[c.c]; g.globalAlpha = 0.14 * (1 - k);
         g.beginPath(); g.moveTo(A.x, A.y); g.lineTo(B.x, B.y); g.stroke();
       }));
       g.globalAlpha = 1;
     }
     for (const q of pts) {
       g.globalAlpha = q.a; g.fillStyle = q.c;
-      if (s >= 2) { g.shadowColor = q.c; g.shadowBlur = 12; } else g.shadowBlur = 0;
       g.beginPath(); g.roundRect(q.x - q.w / 2, q.y - q.h / 2, q.w, q.h, q.r); g.fill();
     }
-    g.globalAlpha = 1; g.shadowBlur = 0;
+    g.globalAlpha = 1;
   }
   let visible = false;
   ScrollTrigger.create({ trigger: '#how', start: 'top bottom', end: 'bottom top', onToggle: (s) => (visible = s.isActive) });

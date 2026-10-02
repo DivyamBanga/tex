@@ -9,11 +9,11 @@
 <meta property="og:description" content="Every AI chat you've ever had, mapped as a living 3D graph. Built by Divyam & Vibhor at CxC." />
 <meta property="og:image" content="https://divyambanga.github.io/tex/assets/poster.jpg" />
 <meta name="twitter:card" content="summary_large_image" />
-<meta name="theme-color" content="#070A12" />
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='5' fill='%2300D4FF'/%3E%3Ccircle cx='16' cy='16' r='11' fill='none' stroke='%2300D4FF' stroke-opacity='.4' stroke-width='1.5'/%3E%3C/svg%3E" />
+<meta name="theme-color" content="#0B0B0C" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='5' fill='%23ECE8E1'/%3E%3Ccircle cx='16' cy='16' r='11' fill='none' stroke='%23ECE8E1' stroke-opacity='.4' stroke-width='1.5'/%3E%3C/svg%3E" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,300..800&family=Martian+Mono:wght@300..600&family=Newsreader:ital,opsz,wght@1,6..72,300..500&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300..700&family=JetBrains+Mono:wght@400&family=Newsreader:ital,opsz,wght@1,6..72,300..500&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="css/style.css" />
 </head>
 <body class="is-intro">
@@ -46,17 +46,12 @@
   </div>
 
   <div id="scanline" aria-hidden="true"></div>
-  <div id="hud" aria-hidden="true">
-    <div class="hud-line" id="hudA"></div>
-    <div class="hud-line hud-vec" id="hudB"></div>
-  </div>
   <div id="landing" aria-hidden="true">
     <div class="landing-title">Resume Tailoring for RBC</div>
-    <div class="landing-coord" id="landingCoord"></div>
   </div>
   <div id="ghosts" aria-hidden="true"></div>
   <div id="labels" aria-hidden="true"></div>
-  <div id="counter" aria-hidden="true"><span class="k">indexed</span> <b id="counterN">00</b><span class="k">/76 conversations</span></div>
+  <div id="counter" aria-hidden="true"><b id="counterN">0</b> of 76 conversations</div>
   <div id="caption" aria-hidden="true"></div>
 
   <!-- Final hero UI -->
@@ -71,7 +66,7 @@
   </header>
 
   <div id="heroCopy">
-    <p class="eyebrow"><span class="pulse"></span>CxC AI Hackathon · Winner</p>
+    <p class="eyebrow"><span class="pulse"></span>Winner, CxC AI Hackathon</p>
     <h1 class="wordmark" aria-label="Cortex"><span>C</span><span>o</span><span>r</span><span>t</span><span>e</span><span>x</span></h1>
     <p class="tagline">Every AI chat you've ever had, <em>mapped as a living memory.</em></p>
   </div>
@@ -103,7 +98,6 @@
     <button id="panelClose" aria-label="Close">✕</button>
     <div class="panel-cluster"><i></i><span></span></div>
     <h3 class="panel-title"></h3>
-    <div class="panel-coord"></div>
     <p class="panel-summary"></p>
     <div class="panel-tags"></div>
     <div class="panel-sub">Nearest memories</div>
@@ -179,10 +173,10 @@
         <div class="demo-search">
           <div class="ds-box"><svg viewBox="0 0 16 16" width="13" height="13"><circle cx="7" cy="7" r="4.6" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="m10.5 10.5 3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span class="ds-q"></span><span class="caret"></span></div>
           <ul class="ds-res">
-            <li style="--c:#FFA64D"><i></i>Active Recall and Spaced Repetition<b>0.82</b></li>
-            <li style="--c:#FFA64D"><i></i>Note-Taking for Memory<b>0.77</b></li>
-            <li style="--c:#FF6B9D"><i></i>2-Hour Focus System<b>0.61</b></li>
-            <li style="--c:#FFA64D"><i></i>Study Plan for Exam<b>0.58</b></li>
+            <li style="--c:#C8AE82"><i></i>Active Recall and Spaced Repetition</li>
+            <li style="--c:#C8AE82"><i></i>Note-Taking for Memory</li>
+            <li style="--c:#C79A8B"><i></i>2-Hour Focus System</li>
+            <li style="--c:#C8AE82"><i></i>Study Plan for Exam</li>
           </ul>
         </div>
       </article>
@@ -195,9 +189,9 @@
           <div class="dm-u">Help me tailor my resume for the RBC data analyst role.</div>
           <div class="dm-tool">
             <div class="dm-th"><span class="spin"></span><code>cortex · search_memory</code><span class="dm-q">"RBC resume"</span></div>
-            <div class="dm-row" style="--c:#00D4FF"><i></i>Resume Tailoring for RBC<b>0.83</b></div>
-            <div class="dm-row" style="--c:#00D4FF"><i></i>Cover letter request<b>0.65</b></div>
-            <div class="dm-row" style="--c:#00D4FF"><i></i>Building a Clean Skills Section<b>0.61</b></div>
+            <div class="dm-row" style="--c:#E6DFD3"><i></i>Resume Tailoring for RBC</div>
+            <div class="dm-row" style="--c:#E6DFD3"><i></i>Cover letter request</div>
+            <div class="dm-row" style="--c:#E6DFD3"><i></i>Building a Clean Skills Section</div>
           </div>
           <div class="dm-a"><span class="av"></span><span class="dm-text"></span></div>
         </div>
@@ -222,9 +216,9 @@
         <h3>Select chats and get a <em>system prompt</em>.</h3>
         <p>Pick a few memories and Cortex compiles them into a portable context pack you can drop into any model.</p>
         <div class="pack">
-          <span style="--c:#7CFF6B">Clean Python Functions</span>
-          <span style="--c:#7CFF6B">CSV Loading and Cleaning</span>
-          <span style="--c:#7CFF6B">Big-O Explained Simply</span>
+          <span style="--c:#9FB39A">Clean Python Functions</span>
+          <span style="--c:#9FB39A">CSV Loading and Cleaning</span>
+          <span style="--c:#9FB39A">Big-O Explained Simply</span>
           <div class="pack-out"><code>You are helping a student who already knows list vs dict trade-offs, writes small pure functions, and…</code></div>
         </div>
       </article>

@@ -13,7 +13,8 @@ const gsap = window.gsap;
 const $ = (s) => document.querySelector(s);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const lerp = (a, b, t) => a + (b - a) * t;
-const PAL = ['#00D4FF', '#FF6B9D', '#7CFF6B', '#FFA64D', '#B48CFF'];
+// Muted, low-chroma topic colours: bone, clay, sage, ochre, slate.
+const PAL = ['#E6DFD3', '#C79A8B', '#9FB39A', '#C8AE82', '#9AA6BC'];
 const HERO = 8;              // "Resume Tailoring for RBC"
 const BASE_D = 38, MIN_D = 3.2;
 // Portrait screens have a narrow horizontal FOV, so pull the camera back to fit the graph.
@@ -31,7 +32,6 @@ function rng(seed) {
 const DEBUG = new URLSearchParams(location.search).has('debug');
 const clock = { t: 0 };
 const now = () => (DEBUG ? clock.t : gsap.ticker.time);
-const fmt = (v) => (v < 0 ? '−' : '') + Math.abs(v).toFixed(3);
 
 export async function initGraph(data) {
   const CH = data.chats, N = CH.length, CN = data.clusters;
@@ -45,7 +45,7 @@ export async function initGraph(data) {
   let W = innerWidth, H = innerHeight, DPR = Math.min(devicePixelRatio || 1, 2);
   renderer.setPixelRatio(DPR);
   renderer.setSize(W, H, false);
-  renderer.setClearColor(0x070A12, 1);
+  renderer.setClearColor(0x0B0B0C, 1);
 
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(42, W / H, 0.1, 600);
@@ -58,9 +58,10 @@ export async function initGraph(data) {
   composer.addPass(new ShaderPass({
     uniforms: { tDiffuse: { value: null } },
     vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-    fragmentShader: 'uniform sampler2D tDiffuse; varying vec2 vUv; void main(){ vec4 c = texture2D(tDiffuse, vUv); gl_FragColor = vec4(min(c.rgb, vec3(2.2)), c.a); }',
+    fragmentShader: 'uniform sampler2D tDiffuse; varying vec2 vUv; void main(){ vec4 c = texture2D(tDiffuse, vUv); gl_FragColor = vec4(min(c.rgb, vec3(1.3)), c.a); }',
   }));
-  const bloom = new UnrealBloomPass(new THREE.Vector2(W, H), 0.85, 0.7, 0.08);
+  const BLOOM = 0.32;
+  const bloom = new UnrealBloomPass(new THREE.Vector2(W, H), BLOOM, 0.5, 0.18);
   // three's blur kernels use sigma = radius (cut off at 1 sigma), which shows up as square halos
   // around bright points on a dark background. Re-weight with a tighter sigma so the falloff reaches ~0.
   [3, 5, 7, 9, 11].forEach((k, i) => {
@@ -78,10 +79,9 @@ export async function initGraph(data) {
     fragmentShader: `varying vec2 vUv; uniform float uAsp; uniform float uDim;
       void main(){
         vec2 p = vUv - 0.5; p.x *= uAsp;
-        vec3 c = vec3(0.027, 0.039, 0.071);
-        c += vec3(0.0, 0.07, 0.13) * smoothstep(0.85, 0.0, length(p - vec2(0.32, 0.12))) * 0.55;
-        c += vec3(0.09, 0.03, 0.13) * smoothstep(0.75, 0.0, length(p - vec2(-0.5, -0.32))) * 0.3;
-        c *= 1.0 - length(p) * 0.5;
+        vec3 c = vec3(0.043, 0.043, 0.047);
+        c += vec3(0.022, 0.02, 0.018) * smoothstep(0.9, 0.0, length(p - vec2(0.2, 0.05)));
+        c *= 1.0 - length(p) * 0.45;
         gl_FragColor = vec4(pow(c, vec3(2.2)), 1.0);
       }`,
     depthTest: false, depthWrite: false,
@@ -105,10 +105,10 @@ export async function initGraph(data) {
       void main(){
         float d = length(gl_PointCoord - 0.5) * 2.0;
         if (d > 1.0) discard;
-        float core = smoothstep(0.26, 0.0, d);
-        float glow = exp(-d * d * 6.0);
-        float a = (core + glow * 0.6) * vAlpha;
-        vec3 col = mix(vColor, vec3(1.0), core * 0.55);
+        float core = smoothstep(0.3, 0.18, d);
+        float glow = exp(-d * d * 9.0);
+        float a = (core + glow * 0.22) * vAlpha;
+        vec3 col = mix(vColor, vec3(1.0), core * 0.18);
         gl_FragColor = vec4(col, a);
       }`,
     transparent: true, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending, ...extra,
@@ -127,7 +127,7 @@ export async function initGraph(data) {
 
   // ---------------- stars ----------------
   {
-    const S = 2200, g = new THREE.BufferGeometry(), pos = new Float32Array(S * 3), tw = new Float32Array(S);
+    const S = 1300, g = new THREE.BufferGeometry(), pos = new Float32Array(S * 3), tw = new Float32Array(S);
     for (let i = 0; i < S; i++) {
       const r = 90 + R() * 220, th = R() * Math.PI * 2, ph = Math.acos(2 * R() - 1);
       pos[i * 3] = r * Math.sin(ph) * Math.cos(th); pos[i * 3 + 1] = r * Math.cos(ph) * 0.7; pos[i * 3 + 2] = r * Math.sin(ph) * Math.sin(th);
@@ -140,7 +140,7 @@ export async function initGraph(data) {
       vertexShader: `attribute float aTw; uniform float uTime; uniform float uScale; varying float vA;
         void main(){ vec4 mv = modelViewMatrix * vec4(position,1.0); gl_Position = projectionMatrix * mv;
           gl_PointSize = (0.8 + aTw * 1.6) * uScale; vA = (0.25 + 0.5 * aTw) * (0.6 + 0.4 * sin(uTime * (0.6 + aTw * 2.0) + aTw * 40.0)); }`,
-      fragmentShader: `varying float vA; void main(){ float d = length(gl_PointCoord - 0.5) * 2.0; gl_FragColor = vec4(vec3(0.55, 0.68, 1.0), vA * smoothstep(1.0, 0.0, d)); }`,
+      fragmentShader: `varying float vA; void main(){ float d = length(gl_PointCoord - 0.5) * 2.0; gl_FragColor = vec4(vec3(0.8, 0.78, 0.74), vA * 0.55 * smoothstep(1.0, 0.0, d)); }`,
       transparent: true, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending,
     }));
     stars.frustumCulled = false;
@@ -191,7 +191,7 @@ export async function initGraph(data) {
   const lineGeo = new LineSegmentsGeometry();
   lineGeo.setPositions(new Float32Array(E * 6));
   lineGeo.setColors(new Float32Array(E * 6));
-  const lineMat = new LineMaterial({ vertexColors: true, linewidth: 1.25, transparent: true, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending });
+  const lineMat = new LineMaterial({ vertexColors: true, linewidth: 1, transparent: true, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending });
   lineMat.resolution.set(W, H);
   const lines = new LineSegments2(lineGeo, lineMat);
   lines.frustumCulled = false; lines.renderOrder = 1;
@@ -200,7 +200,7 @@ export async function initGraph(data) {
   const lineColArr = lineGeo.attributes.instanceColorStart.data;
 
   // sparks: tip of every edge while it draws + travelling signal pulses
-  const PULSES = 70;
+  const PULSES = 36;
   const sparkPts = makePoints(E + PULSES);
   sparkPts.renderOrder = 4;
   const pulses = Array.from({ length: PULSES }, () => ({ e: (R() * E) | 0, t: R(), sp: 0.25 + R() * 0.5, dir: R() < 0.5 }));
@@ -247,9 +247,9 @@ export async function initGraph(data) {
         p = uTarget + v;
         gl_Position = vec4(p.x / uRes.x * 2.0 - 1.0, 1.0 - p.y / uRes.y * 2.0, 0.0, 1.0);
         gl_PointSize = (aKind > 1.5 ? 2.1 : 2.4) * uDpr * (1.0 + e * 0.8);
-        vColor = mix(aColor, vec3(0.35, 0.85, 1.25), smoothstep(0.0, 0.7, e));
-        float a = aKind > 1.5 ? 1.0 : (aKind > 0.5 ? 0.5 : 0.32);
-        vAlpha = a * vis * (1.0 - smoothstep(0.9, 1.0, e)) * uFade * (0.6 + 0.4 * min(age * 5.0, 1.0));
+        vColor = mix(aColor, vec3(0.95, 0.92, 0.87), smoothstep(0.0, 0.7, e));
+        float a = aKind > 1.5 ? 0.85 : (aKind > 0.5 ? 0.45 : 0.3);
+        vAlpha = a * vis * (1.0 - smoothstep(0.62, 0.97, e)) * uFade * (0.6 + 0.4 * min(age * 5.0, 1.0));
       }`,
     fragmentShader: `varying vec3 vColor; varying float vAlpha;
       void main(){ float d = length(gl_PointCoord - 0.5) * 2.0; gl_FragColor = vec4(vColor, vAlpha * smoothstep(1.0, 0.3, d)); }`,
@@ -295,7 +295,7 @@ export async function initGraph(data) {
       let kind;
       if (lum > 95) kind = 2; else if (lum > 42) { if (x % 4 || y % 4) continue; kind = 1; } else { if (x % 6 || y % 6) continue; kind = 0; }
       st.push(r.left + x + Math.random() * 2, r.top + y + Math.random() * 2);
-      if (kind === 0) co.push(0.03, 0.05, 0.1); else co.push(lin(img[o]) * 1.1, lin(img[o + 1]) * 1.1, lin(img[o + 2]) * 1.15);
+      if (kind === 0) co.push(0.045, 0.045, 0.045); else co.push(lin(img[o]) * 1.1, lin(img[o + 1]) * 1.1, lin(img[o + 2]) * 1.15);
       ra.push(Math.random(), Math.random(), Math.random(), Math.random());
       ki.push(kind);
     }
@@ -344,8 +344,8 @@ export async function initGraph(data) {
   // DOM refs
   const stage = $('#stage'), chat = $('#chat'), body = $('#chatBody'), typed = $('#chatTyped');
   const caret = $('#chatCaret'), ph = $('#chatPh'), send = $('#chatSend'), empty = $('#chatEmpty');
-  const fcur = $('#fakeCursor'), ring = $('#clickRing'), scanEl = $('#scanline'), hud = $('#hud');
-  const hudA = $('#hudA'), hudB = $('#hudB'), landing = $('#landing'), ghostsEl = $('#ghosts');
+  const fcur = $('#fakeCursor'), ring = $('#clickRing'), scanEl = $('#scanline');
+  const landing = $('#landing'), ghostsEl = $('#ghosts');
   const labelsEl = $('#labels'), counter = $('#counter'), counterN = $('#counterN'), captionEl = $('#caption');
   const tip = $('#tip'), panel = $('#panel');
 
@@ -384,7 +384,7 @@ export async function initGraph(data) {
   }
 
   // ---------------- per-frame ----------------
-  const white = new THREE.Color(0.82, 0.88, 1.0);
+  const white = new THREE.Color(0.86, 0.85, 0.83);
   const cTmp = new THREE.Color();
   let last = now();
   function frame() {
@@ -423,14 +423,14 @@ export async function initGraph(data) {
       const o = n.i * 3;
       P.pos[o] = n.pos.x; P.pos[o + 1] = n.pos.y; P.pos[o + 2] = n.pos.z;
       cTmp.copy(white).lerp(COL[n.c], n.cmix);
-      const br = (0.55 + 0.45 * n.f) * (1 + n.flash * 1.6 + n.hot * 0.5);
+      const br = (0.5 + 0.5 * n.f) * (1 + n.flash * 0.7 + n.hot * 0.35);
       P.col[o] = cTmp.r * br; P.col[o + 1] = cTmp.g * br; P.col[o + 2] = cTmp.b * br;
       const breathe = 1 + 0.07 * Math.sin(t * 1.6 + n.seed * 3);
-      P.size[n.i] = 17 * n.vis * breathe * (1 + n.flash * 0.9) * (0.7 + 0.3 * n.f) * (1 + n.hot * 0.75);
+      P.size[n.i] = 13 * n.vis * breathe * (1 + n.flash * 0.6) * (0.7 + 0.3 * n.f) * (1 + n.hot * 0.75);
       P.alpha[n.i] = Math.min(1, n.vis) * (0.15 + 0.85 * n.f);
       // screen-space for picking / ghosts
       project(n.pos, tmp); n.sx = tmp.x; n.sy = tmp.y; n.sz = tmp.z;
-      n.px = 17 * 30 / Math.max(0.5, tmp.copy(n.pos).applyMatrix4(camera.matrixWorldInverse).z * -1);
+      n.px = 13 * 30 / Math.max(0.5, tmp.copy(n.pos).applyMatrix4(camera.matrixWorldInverse).z * -1);
       // trail history
       if (trailAmt > 0.001) { n.hist.pop(); n.hist.unshift(n.pos.clone()); }
     }
@@ -444,7 +444,7 @@ export async function initGraph(data) {
         T.pos[o] = q.x; T.pos[o + 1] = q.y; T.pos[o + 2] = q.z;
         cTmp.copy(white).lerp(COL[n.c], n.cmix);
         T.col[o] = cTmp.r; T.col[o + 1] = cTmp.g; T.col[o + 2] = cTmp.b;
-        T.size[idx] = 11 * fall * n.vis; T.alpha[idx] = 0.32 * fall * fall * trailAmt * (n.i === HERO ? 0 : 1);
+        T.size[idx] = 8 * fall * n.vis; T.alpha[idx] = 0.22 * fall * fall * trailAmt * (n.i === HERO ? 0 : 1);
       }
       trailPts.visible = true; T.flush();
     } else trailPts.visible = false;
@@ -460,12 +460,12 @@ export async function initGraph(data) {
       else if (fs) ed.ft = (fs.has(ed.a) && fs.has(ed.b)) ? 1.6 : 0.1;
       else ed.ft = 1;
       ed.f += (ed.ft - ed.f) * k;
-      const base = 0.2 * ed.f * (d > 0 ? 1 : 0);
+      const base = 0.16 * ed.f * (d > 0 ? 1 : 0);
       const ca = COL[A.c], cb = COL[B.c], tipHot = (1 - d) * (d > 0 ? 1 : 0);
       lc[o] = ca.r * base; lc[o + 1] = ca.g * base; lc[o + 2] = ca.b * base;
-      lc[o + 3] = lerp(lerp(ca.r, cb.r, d), 1, tipHot * 0.7) * base * (1 + tipHot * 3);
-      lc[o + 4] = lerp(lerp(ca.g, cb.g, d), 1, tipHot * 0.7) * base * (1 + tipHot * 3);
-      lc[o + 5] = lerp(lerp(ca.b, cb.b, d), 1, tipHot * 0.7) * base * (1 + tipHot * 3);
+      lc[o + 3] = lerp(lerp(ca.r, cb.r, d), 1, tipHot * 0.7) * base * (1 + tipHot * 1.4);
+      lc[o + 4] = lerp(lerp(ca.g, cb.g, d), 1, tipHot * 0.7) * base * (1 + tipHot * 1.4);
+      lc[o + 5] = lerp(lerp(ca.b, cb.b, d), 1, tipHot * 0.7) * base * (1 + tipHot * 1.4);
     }
     linePosArr.needsUpdate = true; lineColArr.needsUpdate = true;
 
@@ -474,7 +474,7 @@ export async function initGraph(data) {
     for (let e = 0; e < E; e++) {
       const ed = edges[e], A = nodes[ed.a], B = nodes[ed.b], o = e * 3, on = ed.draw > 0 && ed.draw < 1;
       S.pos[o] = lerp(A.pos.x, B.pos.x, ed.draw); S.pos[o + 1] = lerp(A.pos.y, B.pos.y, ed.draw); S.pos[o + 2] = lerp(A.pos.z, B.pos.z, ed.draw);
-      S.col[o] = 0.8; S.col[o + 1] = 0.95; S.col[o + 2] = 1; S.size[e] = on ? 9 : 0; S.alpha[e] = on ? 1 : 0;
+      S.col[o] = 0.92; S.col[o + 1] = 0.9; S.col[o + 2] = 0.86; S.size[e] = on ? 6 : 0; S.alpha[e] = on ? 0.8 : 0;
     }
     for (let p = 0; p < PULSES; p++) {
       const pu = pulses[p];
@@ -484,7 +484,7 @@ export async function initGraph(data) {
       S.pos[o] = lerp(A.pos.x, B.pos.x, u); S.pos[o + 1] = lerp(A.pos.y, B.pos.y, u); S.pos[o + 2] = lerp(A.pos.z, B.pos.z, u);
       cTmp.copy(COL[A.c]).lerp(COL[B.c], u).lerp(white, 0.35);
       S.col[o] = cTmp.r; S.col[o + 1] = cTmp.g; S.col[o + 2] = cTmp.b;
-      S.size[idx] = 5.5; S.alpha[idx] = pulseAmt * Math.sin(Math.PI * pu.t) * Math.min(1, ed.f) * 0.9;
+      S.size[idx] = 4; S.alpha[idx] = pulseAmt * Math.sin(Math.PI * pu.t) * Math.min(1, ed.f) * 0.5;
     }
     S.flush();
 
@@ -496,7 +496,7 @@ export async function initGraph(data) {
       const n = nodes[ix];
       Hh.pos[o] = n.pos.x; Hh.pos[o + 1] = n.pos.y; Hh.pos[o + 2] = n.pos.z;
       Hh.col[o] = COL[n.c].r; Hh.col[o + 1] = COL[n.c].g; Hh.col[o + 2] = COL[n.c].b;
-      Hh.size[s] = (46 + Math.sin(t * 3) * 3) * (1 + n.hot * 0.2); Hh.alpha[s] = s ? 0.75 : 0.6;
+      Hh.size[s] = 34 + Math.sin(t * 2) * 1.5; Hh.alpha[s] = s ? 0.5 : 0.38;
     });
     Hh.flush();
 
@@ -630,7 +630,7 @@ export async function initGraph(data) {
     tip.style.setProperty('--c', PAL[c.c]);
     tip.querySelector('.tip-cluster span').textContent = CN[c.c];
     tip.querySelector('.tip-title').textContent = c.title;
-    tip.querySelector('.tip-meta').textContent = `${c.mc} messages · [${c.p.map(fmt).join(', ')}]`;
+    tip.querySelector('.tip-meta').textContent = `${c.mc} messages`;
     tip.querySelector('.tip-summary').textContent = c.summary;
     tip.querySelector('.tip-tags').innerHTML = c.tags.slice(0, 4).map((x) => `<span>${x}</span>`).join('');
     placeTip(nodes[i]);
@@ -663,11 +663,10 @@ export async function initGraph(data) {
     panel.querySelector('.panel-cluster').style.setProperty('--c', PAL[c.c]);
     panel.querySelector('.panel-cluster span').textContent = `${CN[c.c]} · ${c.mc} messages`;
     panel.querySelector('.panel-title').textContent = c.title;
-    panel.querySelector('.panel-coord').textContent = `x ${fmt(c.p[0])}   y ${fmt(c.p[1])}   z ${fmt(c.p[2])}`;
     panel.querySelector('.panel-summary').textContent = c.summary;
     panel.querySelector('.panel-tags').innerHTML = c.tags.map((x) => `<span>${x}</span>`).join('');
     panel.querySelector('.panel-nb').innerHTML = c.nb.slice(0, 5).map(([j, s]) =>
-      `<li data-j="${j}" style="--c:${PAL[CH[j].c]};--w:${Math.round(s * 100)}%"><i></i><span>${CH[j].title}${CH[j].title === c.title ? ' <small style="color:var(--pink);font-family:var(--mono);font-size:9px">DUPLICATE</small>' : ''}</span><em></em><b>${s.toFixed(2)}</b></li>`).join('');
+      `<li data-j="${j}" style="--c:${PAL[CH[j].c]};--w:${Math.round(s * 100)}%"><i></i><span>${CH[j].title}${CH[j].title === c.title ? '<small>same chat, again</small>' : ''}</span><em></em></li>`).join('');
     panel.classList.add('on');
     fly(nodes[i].umap, 13);
   }
@@ -745,7 +744,6 @@ export async function initGraph(data) {
   //                               THE FILM
   // =====================================================================
   const ghosts = [];
-  let hudIv = 0;
   const stageZ = { px: 0, py: 0, s: 1 };
   function applyStage() {
     const cx = W / 2, cy = H / 2, s = stageZ.s;
@@ -766,12 +764,12 @@ export async function initGraph(data) {
   function captionOut(tl, at) {
     tl.call(() => gsap.to(captionEl.children, { opacity: 0, y: -12, filter: 'blur(6px)', duration: 0.45, stagger: 0.03, ease: 'power2.in' }), null, at);
   }
-  function shockwave(x, y, color = '#00D4FF') {
-    for (let k = 0; k < 2; k++) {
+  function shockwave(x, y, color = 'rgba(236,232,225,.55)') {
+    for (let k = 0; k < 1; k++) {
       const d = document.createElement('div');
-      Object.assign(d.style, { position: 'absolute', left: `${x}px`, top: `${y}px`, width: '24px', height: '24px', margin: '-12px 0 0 -12px', borderRadius: '50%', border: `${k ? 1 : 1.5}px solid ${color}`, boxShadow: `0 0 24px ${color}`, pointerEvents: 'none', zIndex: 5 });
+      Object.assign(d.style, { position: 'absolute', left: `${x}px`, top: `${y}px`, width: '24px', height: '24px', margin: '-12px 0 0 -12px', borderRadius: '50%', border: `1px solid ${color}`, pointerEvents: 'none', zIndex: 5 });
       $('#hero').appendChild(d);
-      gsap.fromTo(d, { scale: 0.2, opacity: 1 }, { scale: k ? 26 : 16, opacity: 0, duration: k ? 1.6 : 1.1, delay: k * 0.1, ease: 'expo.out', onComplete: () => d.remove() });
+      gsap.fromTo(d, { scale: 0.2, opacity: 1 }, { scale: 14, opacity: 0, duration: 1.4, delay: k * 0.1, ease: 'expo.out', onComplete: () => d.remove() });
     }
   }
   let spawned = 0;
@@ -779,7 +777,7 @@ export async function initGraph(data) {
     const n = nodes[i];
     gsap.fromTo(n, { vis: 0 }, { vis: 1, duration: big ? 0.9 : 0.55, ease: 'back.out(3)' });
     n.flash = big ? 2.4 : 1.6;
-    spawned++; counterN.textContent = String(spawned).padStart(2, '0');
+    spawned++; counterN.textContent = spawned;
   }
   function wrapWords(root) {
     const tw = document.createTreeWalker(root, NodeFilter.SHOW_TEXT), list = [];
@@ -804,12 +802,12 @@ export async function initGraph(data) {
     typed.textContent = ''; ph.style.display = ''; caret.style.display = 'none'; send.classList.remove('ready');
     chat.style.clipPath = ''; gsap.set(chat, { clearProps: 'all' }); gsap.set(stage, { display: '', opacity: 1 });
     stageZ.s = 1; applyStage();
-    gsap.set([fcur, ring, scanEl, hud, landing, counter], { opacity: 0 });
+    gsap.set([fcur, ring, scanEl, landing, counter], { opacity: 0 });
     captionEl.innerHTML = '';
     nodes.forEach((n) => { n.fly = 0; n.vis = 0; n.flash = 0; n.cmix = n.i === HERO ? 1 : 0; n.hist.forEach((h) => h.copy(n.chaos)); });
     edges.forEach((e) => { e.draw = 0; });
-    trailAmt = 0; pulseAmt = 0; labelsOn = 0; spawned = 0; counterN.textContent = '00';
-    bloom.strength = 0.85;
+    trailAmt = 0; pulseAmt = 0; labelsOn = 0; spawned = 0; counterN.textContent = '0';
+    bloom.strength = BLOOM;
     const hn = nodes[HERO].umap;
     Object.assign(rig, { tx: hn.x, ty: hn.y, tz: hn.z, d: 6.5, az: AZ_F - 1.5, el: 0.08, shift: 0 });
     applyShift(); applyRig();
@@ -876,31 +874,18 @@ export async function initGraph(data) {
       scan = { t0, dur: SCAN, top: r.top, h: r.height, left: r.left - 20, s: 1 };
       scanEl.style.width = `${r.width + 40}px`;
       gsap.to(scanEl, { opacity: 1, duration: 0.15 });
-      hud.style.transform = `translate(${r.left + 4}px, ${r.top - 52}px)`;
-      hudA.innerHTML = '<b>ENCODING</b>&nbsp;&nbsp;chat_008 · 2 messages → nomic-embed-text';
-      gsap.to(hud, { opacity: 1, duration: 0.3 });
-      const vr = rng(11); let ticks = 0;
-      clearInterval(hudIv);
-      const iv = hudIv = setInterval(() => {
-        const v = Array.from({ length: 7 }, () => { const x = vr() * 2 - 1; return (x < 0 ? '−' : ' ') + Math.abs(x).toFixed(4); });
-        hudB.textContent = `[${v.join(', ')}, … ]  768d`;
-        if (++ticks > 26) clearInterval(iv);
-      }, 55);
     }, null, dis);
     tl.call(() => { gsap.to(scanEl, { opacity: 0, duration: 0.25 }); chat.style.opacity = 0; scan = null; }, null, dis + SCAN + 0.02);
-    tl.call(() => { clearInterval(hudIv); hudA.innerHTML = '<b>PROJECTING</b>&nbsp;&nbsp;UMAP · 768 → 3'; hudB.textContent = `[ ${CH[HERO].p.map(fmt).join(', ')} ]`; }, null, dis + SCAN + 0.15);
     const col = dis + SCAN + 0.35;
     tl.to(partMat.uniforms.uCollapse, { value: 1, duration: 1.55, ease: 'none' }, col);
     const land = col + 1.25;
     tl.call(() => {
       spawn(HERO, true);
       const n = nodes[HERO]; shockwave(n.sx, n.sy);
-      gsap.fromTo(bloom, { strength: 2.6 }, { strength: 0.85, duration: 1.6, ease: 'power2.out' });
-      gsap.to(hud, { opacity: 0, duration: 0.4 });
+      gsap.fromTo(bloom, { strength: 0.9 }, { strength: BLOOM, duration: 1.6, ease: 'power2.out' });
     }, null, land);
     tl.call(dropParticles, null, col + 1.6);
     tl.call(() => {
-      $('#landingCoord').textContent = `768d → [ ${CH[HERO].p.map(fmt).join(', ')} ]`;
       gsap.fromTo(landing, { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.6, ease: 'power3.out' });
     }, null, land + 0.25);
 
@@ -1005,13 +990,13 @@ export async function initGraph(data) {
   function skip() {
     if (!introTL) return;
     introTL.kill(); introTL = null;
-    gsap.killTweensOf([fcur, ring, chat, hud, landing, counter, scanEl, stageZ, rig, partMat.uniforms.uCollapse, ...nodes, ...edges]);
+    gsap.killTweensOf([fcur, ring, chat, landing, counter, scanEl, stageZ, rig, partMat.uniforms.uCollapse, ...nodes, ...edges]);
     dropParticles(); scan = null;
     ghosts.splice(0).forEach((g) => { g.tl.kill(); g.el.remove(); });
-    gsap.to([stage, scanEl, hud, landing, counter, captionEl], { opacity: 0, duration: 0.4 });
+    gsap.to([stage, scanEl, landing, counter, captionEl], { opacity: 0, duration: 0.4 });
     nodes.forEach((n) => { n.fly = 1; n.vis = 1; n.cmix = 1; n.flash = 0.6; });
     edges.forEach((e) => { e.draw = 1; });
-    trailAmt = 0; pulseAmt = 1; bloom.strength = 0.85;
+    trailAmt = 0; pulseAmt = 1; bloom.strength = BLOOM;
     gsap.to(rig, { tx: 0, ty: 0, tz: 0, d: maxD(), az: AZ_F, el: EL_F, shift: desktopShift(), duration: 1.2, ease: 'power3.inOut', onUpdate: applyShift, onComplete: goLive });
     revealUI(true);
   }
